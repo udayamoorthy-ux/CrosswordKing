@@ -1,0 +1,6 @@
+{
+  "name": "CrossKing",
+  "description": "An interactive crossword puzzle and vocabulary builder featuring level tracking, anagram games, and automatically generated word meanings powered by Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
