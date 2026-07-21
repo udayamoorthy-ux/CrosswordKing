@@ -41,6 +41,7 @@ fun MainGameScreen(viewModel: GameViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val currentLevelId by viewModel.currentLevelId.collectAsState()
     val allProgress by viewModel.allProgress.collectAsState()
+    var showHelpDialog by remember { mutableStateOf(false) }
     
     val currentLevelProgress = allProgress.find { it.levelId == currentLevelId }
 
@@ -55,6 +56,16 @@ fun MainGameScreen(viewModel: GameViewModel) {
                     )
                 },
                 actions = {
+                    IconButton(
+                        onClick = { showHelpDialog = true },
+                        modifier = Modifier.testTag("help_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HelpOutline,
+                            contentDescription = "How to Play Guide",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                     IconButton(
                         onClick = { viewModel.selectLevel(currentLevelId) },
                         modifier = Modifier.testTag("reset_button")
@@ -121,11 +132,204 @@ fun MainGameScreen(viewModel: GameViewModel) {
                     .weight(1f)
             ) {
                 when (selectedTab) {
-                    0 -> CrosswordTab(viewModel = viewModel)
-                    1 -> VocabTab(viewModel = viewModel)
+                    0 -> CrosswordTab(viewModel = viewModel, onOpenHelp = { showHelpDialog = true })
+                    1 -> VocabTab(viewModel = viewModel, onOpenHelp = { showHelpDialog = true })
                     2 -> WordBankTab(viewModel = viewModel)
                 }
             }
+        }
+    }
+
+    // Beautiful step-by-step onboarding and help dialog
+    if (showHelpDialog) {
+        AlertDialog(
+            onDismissRequest = { showHelpDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Info,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Text(
+                        text = "How to Play CrossKing",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                }
+            },
+            text = {
+                var helpTab by remember { mutableIntStateOf(selectedTab.coerceIn(0, 1)) }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Help Sub-tabs for Crossword vs Vocab Game
+                    TabRow(
+                        selectedTabIndex = helpTab,
+                        containerColor = Color.Transparent,
+                        contentColor = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Tab(
+                            selected = helpTab == 0,
+                            onClick = { helpTab = 0 },
+                            text = { Text("Crossword", fontWeight = FontWeight.Bold) }
+                        )
+                        Tab(
+                            selected = helpTab == 1,
+                            onClick = { helpTab = 1 },
+                            text = { Text("Vocabulary", fontWeight = FontWeight.Bold) }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    if (helpTab == 0) {
+                        // Crossword guide
+                        Text(
+                            text = "Solve the crossword grid using the clues provided.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        
+                        HelpStepItem(
+                            number = "1",
+                            icon = Icons.Default.TouchApp,
+                            title = "Select a Cell",
+                            description = "Tap any playable white box in the crossword grid. This highlights the word (Across or Down) and displays its clue."
+                        )
+
+                        HelpStepItem(
+                            number = "2",
+                            icon = Icons.Default.Keyboard,
+                            title = "Type Your Answer",
+                            description = "Use our custom keyboard at the bottom of the screen to enter letters. The highlighted active cell moves forward automatically."
+                        )
+
+                        HelpStepItem(
+                            number = "3",
+                            icon = Icons.Default.Lightbulb,
+                            title = "Need Help? Use AI",
+                            description = "Stuck? Tap the 'Gemini AI Definition' button on the clue box to get an instant description from Gemini AI."
+                        )
+
+                        HelpStepItem(
+                            number = "4",
+                            icon = Icons.Default.Check,
+                            title = "Verify & Progress",
+                            description = "Once filled, tap 'Verify Solution'. Correct solutions unlock level progression when both crossword and quiz tabs are complete!"
+                        )
+                    } else {
+                        // Vocab game guide
+                        Text(
+                            text = "Spell the secret word that matches the definition using scrambled letters.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        HelpStepItem(
+                            number = "1",
+                            icon = Icons.Default.MenuBook,
+                            title = "Read Definition",
+                            description = "Look at the definition displayed inside the top card to understand what word you are spelling."
+                        )
+
+                        HelpStepItem(
+                            number = "2",
+                            icon = Icons.Default.Shuffle,
+                            title = "Spell with Buttons",
+                            description = "Tap on the scrambled letter buttons to enter them. Tap 'Delete Last' if you make a spelling mistake."
+                        )
+
+                        HelpStepItem(
+                            number = "3",
+                            icon = Icons.Default.Verified,
+                            title = "Submit Your Answer",
+                            description = "Click 'Submit Spelling' to check if your spelling is correct. If it is, advance to the next word to boost your score!"
+                        )
+
+                        HelpStepItem(
+                            number = "4",
+                            icon = Icons.Default.LockOpen,
+                            title = "Level Up Progress",
+                            description = "Achieve the target score to finish the vocabulary builder and complete the overall level!"
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showHelpDialog = false }
+                ) {
+                    Text("Got it!")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun HelpStepItem(
+    number: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .padding(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .background(MaterialTheme.colorScheme.primary, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = number,
+                color = MaterialTheme.colorScheme.onPrimary,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                text = description,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 2.dp)
+            )
         }
     }
 }
@@ -232,7 +436,7 @@ fun LevelSelector(
 }
 
 @Composable
-fun CrosswordTab(viewModel: GameViewModel) {
+fun CrosswordTab(viewModel: GameViewModel, onOpenHelp: () -> Unit) {
     val currentLevelId by viewModel.currentLevelId.collectAsState()
     val grid by viewModel.crosswordGrid.collectAsState()
     val selectedCell by viewModel.selectedCell.collectAsState()
@@ -255,293 +459,355 @@ fun CrosswordTab(viewModel: GameViewModel) {
     var activeDefinitionWord by remember { mutableStateOf("") }
     val aiState by viewModel.aiMeaningState.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        // Validation Status Alert
-        AnimatedVisibility(visible = isCorrect != null) {
-            val containerColor = if (isCorrect == true) Color(0xFFE2F9E9) else Color(0xFFFCE8E6)
-            val textColor = if (isCorrect == true) Color(0xFF1E7E34) else Color(0xFFC71C1C)
-            val icon = if (isCorrect == true) Icons.Default.CheckCircle else Icons.Default.Info
-            val message = if (isCorrect == true) 
-                "Amazing! The crossword is perfectly complete! Level progression unlocked." 
-            else 
-                "Some letters are incorrect. Review the words and try again!"
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(containerColor)
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(imageVector = icon, contentDescription = null, tint = textColor)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(text = message, color = textColor, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-            }
-        }
-
-        // Draw Crossword Grid
-        Card(
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(bottom = 180.dp), // Clear space for the docked keyboard
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .align(Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                for (r in 0 until level.gridHeight) {
+            // Dismissible Help & Tutorial Banner
+            var dismissedHelpBanner by remember { mutableStateOf(false) }
+            if (!dismissedHelpBanner) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable { onOpenHelp() },
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f))
+                ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        for (c in 0 until level.gridWidth) {
-                            val coord = Pair(r, c)
-                            val matchingWords = level.words.filter { word ->
-                                if (word.isAcross) {
-                                    r == word.row && c >= word.col && c < word.col + word.length
-                                } else {
-                                    c == word.col && r == word.row && r < word.row + word.length
-                                }
-                            }
-                            val isPlayableCell = matchingWords.isNotEmpty()
-                            val enteredLetter = grid[coord] ?: ' '
-                            val numberIndicator = startCellNumbers[coord]
-
-                            if (isPlayableCell) {
-                                val isSelected = selectedCell == coord
-                                val isActiveWordCell = activeWord?.let { w ->
-                                    if (w.isAcross) {
-                                        r == w.row && c >= w.col && c < w.col + w.length
-                                    } else {
-                                        c == w.col && r >= w.row && r < w.row + w.length
-                                    }
-                                } ?: false
-
-                                val cellColor = when {
-                                    isSelected -> MaterialTheme.colorScheme.primaryContainer
-                                    isActiveWordCell -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                                    else -> MaterialTheme.colorScheme.surface
-                                }
-
-                                val borderColor = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .size(54.dp)
-                                        .testTag("cell_${r}_${c}")
-                                        .background(cellColor, RoundedCornerShape(4.dp))
-                                        .border(
-                                            width = if (isSelected) 2.5.dp else 1.2.dp,
-                                            color = borderColor,
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                        .clickable { viewModel.selectCell(r, c) }
-                                ) {
-                                    // Word Number Indicator
-                                    if (numberIndicator != null) {
-                                        Text(
-                                            text = numberIndicator.toString(),
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier
-                                                .padding(start = 4.dp, top = 2.dp)
-                                                .align(Alignment.TopStart)
-                                        )
-                                    }
-
-                                    // Letter Text
-                                    Text(
-                                        text = enteredLetter.toString(),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 24.sp,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.align(Alignment.Center)
-                                    )
-                                }
-                            } else {
-                                // Blocked Cell (Black square)
-                                Box(
-                                    modifier = Modifier
-                                        .size(54.dp)
-                                        .background(Color.DarkGray.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
-                                )
-                            }
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = "Help Guide",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(26.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "How to Play Crossword?",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "New to Crossword or need a quick refresher? Tap here for our easy 1-minute visual tutorial!",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                            )
+                        }
+                        IconButton(
+                            onClick = { dismissedHelpBanner = true },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Close help banner",
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(18.dp)
+                            )
                         }
                     }
                 }
+                Spacer(modifier = Modifier.height(4.dp))
             }
-        }
 
-        // Active Word Clue Box
-        activeWord?.let { word ->
+            // Validation Status Alert
+            AnimatedVisibility(visible = isCorrect != null) {
+                val containerColor = if (isCorrect == true) Color(0xFFE2F9E9) else Color(0xFFFCE8E6)
+                val textColor = if (isCorrect == true) Color(0xFF1E7E34) else Color(0xFFC71C1C)
+                val icon = if (isCorrect == true) Icons.Default.CheckCircle else Icons.Default.Info
+                val message = if (isCorrect == true) 
+                    "Amazing! The crossword is perfectly complete! Level progression unlocked." 
+                else 
+                    "Some letters are incorrect. Review the words and try again!"
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(containerColor)
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(imageVector = icon, contentDescription = null, tint = textColor)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(text = message, color = textColor, fontWeight = FontWeight.Medium, fontSize = 14.sp)
+                }
+            }
+
+            // Draw Crossword Grid
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                    .padding(vertical = 12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(
-                    modifier = Modifier.padding(14.dp)
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.CenterHorizontally),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = if (word.isAcross) "ACROSS CLUE" else "DOWN CLUE",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
-                        )
-
-                        // "Ask Gemini" button for instant definition
-                        Button(
-                            onClick = {
-                                activeDefinitionWord = word.word
-                                viewModel.lookupCustomWord(word.word)
-                                showDefinitionDialog = true
-                            },
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary,
-                                contentColor = MaterialTheme.colorScheme.onTertiary
-                            ),
-                            modifier = Modifier
-                                .height(32.dp)
-                                .testTag("ai_clue_button")
+                    for (r in 0 until level.gridHeight) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
                         ) {
-                            Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Gemini AI Definition", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            for (c in 0 until level.gridWidth) {
+                                val coord = Pair(r, c)
+                                val matchingWords = level.words.filter { word ->
+                                    if (word.isAcross) {
+                                        r == word.row && c >= word.col && c < word.col + word.length
+                                    } else {
+                                        c == word.col && r == word.row && r < word.row + word.length
+                                    }
+                                }
+                                val isPlayableCell = matchingWords.isNotEmpty()
+                                val enteredLetter = grid[coord] ?: ' '
+                                val numberIndicator = startCellNumbers[coord]
+
+                                if (isPlayableCell) {
+                                    val isSelected = selectedCell == coord
+                                    val isActiveWordCell = activeWord?.let { w ->
+                                        if (w.isAcross) {
+                                            r == w.row && c >= w.col && c < w.col + w.length
+                                        } else {
+                                            c == w.col && r >= w.row && r < w.row + w.length
+                                        }
+                                    } ?: false
+
+                                    val cellColor = when {
+                                        isSelected -> MaterialTheme.colorScheme.primaryContainer
+                                        isActiveWordCell -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                        else -> MaterialTheme.colorScheme.surface
+                                    }
+
+                                    val borderColor = if (isSelected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .testTag("cell_${r}_${c}")
+                                            .background(cellColor, RoundedCornerShape(4.dp))
+                                            .border(
+                                                width = if (isSelected) 2.5.dp else 1.2.dp,
+                                                color = borderColor,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .clickable { viewModel.selectCell(r, c) }
+                                    ) {
+                                        // Word Number Indicator
+                                        if (numberIndicator != null) {
+                                            Text(
+                                                text = numberIndicator.toString(),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier
+                                                    .padding(start = 4.dp, top = 2.dp)
+                                                    .align(Alignment.TopStart)
+                                            )
+                                        }
+
+                                        // Letter Text
+                                        Text(
+                                            text = enteredLetter.toString(),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 24.sp,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.align(Alignment.Center)
+                                        )
+                                    }
+                                } else {
+                                    // Blocked Cell (Black square)
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .background(Color.DarkGray.copy(alpha = 0.85f), RoundedCornerShape(4.dp))
+                                    )
+                                }
+                            }
                         }
                     }
-
-                    Text(
-                        text = word.clue,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.padding(top = 6.dp)
-                    )
                 }
             }
-        } ?: run {
-            Text(
-                text = "Tap any grid cell to focus a word & read its clue",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-        }
 
-        // Action Buttons: Verify & Help
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Button(
-                onClick = { viewModel.validateCrossword() },
+            // Active Word Clue Box
+            activeWord?.let { word ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = if (word.isAcross) "ACROSS CLUE" else "DOWN CLUE",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                            )
+
+                            // "Ask Gemini" button for instant definition
+                            Button(
+                                onClick = {
+                                    activeDefinitionWord = word.word
+                                    viewModel.lookupCustomWord(word.word)
+                                    showDefinitionDialog = true
+                                },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.tertiary,
+                                    contentColor = MaterialTheme.colorScheme.onTertiary
+                                ),
+                                modifier = Modifier
+                                    .height(32.dp)
+                                    .testTag("ai_clue_button")
+                            ) {
+                                Icon(Icons.Default.Lightbulb, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Gemini AI Definition", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Text(
+                            text = word.clue,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
+                }
+            } ?: run {
+                Text(
+                    text = "Tap any grid cell to focus a word & read its clue",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            }
+
+            // Action Buttons: Verify & Help
+            Row(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
-                    .testTag("validate_button"),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    .fillMaxWidth()
+                    .padding(vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Icon(Icons.Default.Check, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Verify Solution", fontWeight = FontWeight.Bold)
+                Button(
+                    onClick = { viewModel.validateCrossword() },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp)
+                        .testTag("validate_button"),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Verify Solution", fontWeight = FontWeight.Bold)
+                }
+            }
+
+            // Across & Down List
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                text = "Level Clues",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.Start)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Across
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "ACROSS",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    level.words.filter { it.isAcross }.forEach { word ->
+                        val isWordActive = activeWord?.id == word.id && activeWord?.isAcross == true
+                        Text(
+                            text = "${word.col + 1}. ${word.clue}",
+                            fontSize = 12.sp,
+                            fontWeight = if (isWordActive) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isWordActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.selectClue(word) }
+                                .padding(vertical = 4.dp)
+                        )
+                    }
+                }
+
+                // Down
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "DOWN",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    HorizontalDivider(color = MaterialTheme.colorScheme.secondary, thickness = 1.dp)
+                    Spacer(modifier = Modifier.height(6.dp))
+                    level.words.filter { !it.isAcross }.forEach { word ->
+                        val isWordActive = activeWord?.id == word.id && activeWord?.isAcross == false
+                        Text(
+                            text = "${word.row + 1}. ${word.clue}",
+                            fontSize = 12.sp,
+                            fontWeight = if (isWordActive) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isWordActive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { viewModel.selectClue(word) }
+                                .padding(vertical = 4.dp)
+                        )
+                    }
+                }
             }
         }
 
-        // Custom Alphabet Grid Keyboard for Crossword Entries (Minimum interactive target 48dp)
-        Spacer(modifier = Modifier.height(12.dp))
-        CrosswordKeyboard(
-            onKeyTyped = { viewModel.enterLetter(it) },
-            onBackspace = { viewModel.deleteLetter() }
-        )
-
-        // Across & Down List
-        Spacer(modifier = Modifier.height(20.dp))
-        Text(
-            text = "Level Clues",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.Start)
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        // Docked Keyboard for Crossword Entries
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(8.dp)
         ) {
-            // Across
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "ACROSS",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Divider(color = MaterialTheme.colorScheme.primary, thickness = 1.dp)
-                Spacer(modifier = Modifier.height(6.dp))
-                level.words.filter { it.isAcross }.forEach { word ->
-                    val isWordActive = activeWord?.id == word.id && activeWord?.isAcross == true
-                    Text(
-                        text = "${word.col + 1}. ${word.clue}",
-                        fontSize = 12.sp,
-                        fontWeight = if (isWordActive) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isWordActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.selectClue(word) }
-                            .padding(vertical = 4.dp)
-                    )
-                }
-            }
-
-            // Down
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "DOWN",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.secondary
-                )
-                Divider(color = MaterialTheme.colorScheme.secondary, thickness = 1.dp)
-                Spacer(modifier = Modifier.height(6.dp))
-                level.words.filter { !it.isAcross }.forEach { word ->
-                    val isWordActive = activeWord?.id == word.id && activeWord?.isAcross == false
-                    Text(
-                        text = "${word.row + 1}. ${word.clue}",
-                        fontSize = 12.sp,
-                        fontWeight = if (isWordActive) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isWordActive) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { viewModel.selectClue(word) }
-                            .padding(vertical = 4.dp)
-                    )
-                }
-            }
+            CrosswordKeyboard(
+                onKeyTyped = { viewModel.enterLetter(it) },
+                onBackspace = { viewModel.deleteLetter() }
+            )
         }
     }
 
@@ -656,22 +922,20 @@ fun CrosswordKeyboard(onKeyTyped: (Char) -> Unit, onBackspace: () -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(8.dp),
+            .padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         keys.forEachIndexed { rowIndex, row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // If it's the last row, add an empty space or align nicely
                 row.forEach { char ->
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 3.dp)
                             .weight(1f)
-                            .height(50.dp)
+                            .height(46.dp)
                             .testTag("key_$char")
                             .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(4.dp))
                             .border(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
@@ -681,7 +945,7 @@ fun CrosswordKeyboard(onKeyTyped: (Char) -> Unit, onBackspace: () -> Unit) {
                         Text(
                             text = char.toString(),
                             fontWeight = FontWeight.Bold,
-                            fontSize = 17.sp,
+                            fontSize = 15.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
@@ -691,9 +955,8 @@ fun CrosswordKeyboard(onKeyTyped: (Char) -> Unit, onBackspace: () -> Unit) {
                 if (rowIndex == 2) {
                     Box(
                         modifier = Modifier
-                            .padding(horizontal = 3.dp)
-                            .weight(1.8f)
-                            .height(50.dp)
+                            .weight(1.5f)
+                            .height(46.dp)
                             .testTag("key_delete")
                             .background(MaterialTheme.colorScheme.errorContainer, RoundedCornerShape(4.dp))
                             .clickable { onBackspace() },
@@ -703,7 +966,7 @@ fun CrosswordKeyboard(onKeyTyped: (Char) -> Unit, onBackspace: () -> Unit) {
                             imageVector = Icons.Default.Delete,
                             contentDescription = "Backspace",
                             tint = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -713,7 +976,7 @@ fun CrosswordKeyboard(onKeyTyped: (Char) -> Unit, onBackspace: () -> Unit) {
 }
 
 @Composable
-fun VocabTab(viewModel: GameViewModel) {
+fun VocabTab(viewModel: GameViewModel, onOpenHelp: () -> Unit) {
     val quizState by viewModel.vocabQuizState.collectAsState()
     val currentLevelId by viewModel.currentLevelId.collectAsState()
 
@@ -733,6 +996,57 @@ fun VocabTab(viewModel: GameViewModel) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // Dismissible Help & Tutorial Banner
+        var dismissedHelpBanner by remember { mutableStateOf(false) }
+        if (!dismissedHelpBanner) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+                    .clickable { onOpenHelp() },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f))
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.School,
+                        contentDescription = "Help Guide",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "How to Play Vocabulary Game?",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        Text(
+                            text = "Need a hand or want to see how to build your score? Tap here for our easy 1-minute visual tutorial!",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                    IconButton(
+                        onClick = { dismissedHelpBanner = true },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close help banner",
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // Quiz Score Card
         Card(
             modifier = Modifier.fillMaxWidth(),
